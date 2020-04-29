@@ -17,6 +17,8 @@ import config
 
 import docker
 
+import pathlib
+
 class titilerLambdaStack(core.Stack):
     """Titiler Lambda Stack"""
     
@@ -128,25 +130,36 @@ class titilerECSStack(core.Stack):
             description="Allows traffic on port 80 from NLB",
         )
 
+def _create_lambda_package():
+    print ("building image")
+    os.system("docker build --tag lambda:latest ./lambda/")
+    
+    print ("running container")
+    os.system("docker run --name lambda -itd lambda:latest /bin/bash")
+    
+    os.system("docker cp lambda:/tmp/package.zip ./lambda/package.zip")
+    os.system("docker stop lambda")
+    os.system("docker rm lambda")
+
+    
 def create_lambda_package():
     """Creates the lambda deployment package"""
-    
-    file_dir = os.path.dirname(os.path.abspath(__file__))
+    code_path = pathlib.Path(os.path.abspath(__file__))
+    file_dir = str(code_path.parent.parent / 'lambda')
     client = docker.from_env()
-
     client.images.build(
         path=os.path.join(file_dir, "..", "lambda"),
         dockerfile="Dockerfile",
         tag="lambda:latest"
     )
-    
     lambda_container = client.containers.run(
         name="lambda",
         image="lambda:latest",
         command='/bin/sh -c "cp /tmp/package.zip /mnt/output/package.zip"',
         volumes={
-            "lambda": {"bind": "/mnt/output", "mode": "rw"},
-        }
+            file_dir: {"bind": "/mnt/output", "mode": "rw"},
+        },
+        auto_remove=True,
     )
 
 app = core.App()
