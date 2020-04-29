@@ -9,12 +9,42 @@ from aws_cdk import (
     aws_ec2 as ec2,
     aws_ecs as ecs,
     aws_ecs_patterns as ecs_patterns,
+    aws_lambda as _lambda,
+    aws_apigateway as apigw,
 )
 
 import config
 
+class titilerLambdaStack(core.Stack):
+    """Titiler Lambda Stack"""
+    
+    def __init__(
+        self, 
+        scope: core.Construct,
+        id: str, 
+        code_dir: str = "./", 
+        **kwargs: Any,
+    ) -> None:
+        """Define stack."""
+        super().__init__(scope, id, *kwargs)
+        
+        lambda_function = _lambda.Function(
+            self, f"{id}-lambda",
+            runtime=_lambda.Runtime.PYTHON_3_7,
+            code=_lambda.Code.from_asset(
+                os.path.join(code_dir, 'lambda', 'package.zip'),
+                exclude=["cdk.out", ".git"]
+            ),
+            handler="handler.handler"
+        )
 
-class titilerStack(core.Stack):
+        api_endpoint = apigw.LambdaRestApi(
+            self, f"{id}-endpoint",
+            handler=lambda_function
+        )
+
+
+class titilerECSStack(core.Stack):
     """Titiler ECS Fargate Stack."""
 
     def __init__(
@@ -106,13 +136,20 @@ for key, value in {
     if value:
         core.Tag.add(app, key, value)
 
-stackname = f"{config.PROJECT_NAME}-{config.STAGE}"
-titilerStack(
+ecs_stackname = f"{config.PROJECT_NAME}-ecs-{config.STAGE}"
+titilerECSStack(
     app,
-    stackname,
+    ecs_stackname,
     cpu=config.TASK_CPU,
     memory=config.TASK_MEMORY,
     mincount=config.MIN_ECS_INSTANCES,
     maxcount=config.MAX_ECS_INSTANCES,
 )
+
+lambda_stackname = f"{config.PROJECT_NAME}-lambda-{config.STAGE}"
+titilerLambdaStack(
+    app,
+    lambda_stackname,
+)
+
 app.synth()
