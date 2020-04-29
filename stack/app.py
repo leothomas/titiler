@@ -28,47 +28,11 @@ class titilerLambdaStack(core.Stack):
         **kwargs: Any,
     ) -> None:
         """Define stack."""
-        super().__init__(scope, id, *kwargs)
-
-        client = docker.from_env()
+        super().__init__(scope, id, *kwargs)        
         
-        # docker build --tag lambda:latest .
-        client.images.build(
-            path=os.path.join(code_dir, "lambda"),
-            dockerfile="Dockerfile",
-            tag="lambda:latest"
-        )
-        
-        # docker run --name lambda -itd lambda:latest /bin/bash
-        lambda_container = client.containers.run(
-            name="lambda", 
-            image="lambda:latest", 
-            command="/bin/bash",
-            detach=True, 
-            tty=True
-        )
-    
-        # docker cp lambda:/tmp/package.zip package.zip
-        
-        # docker-py has deprecated `copy()` and recomends using `get_archive()`
-        bits, stat = lambda_container.get_archive(
-            path="/tmp/package.zip"
-        ) 
+        # create the lambda deployment package
+        create_lambda_package()
 
-        package_filepath = os.path.join("lambda", "package.tar")
-
-        with open(package_filepath, "wb") as f:
-            for chunk in bits:
-                f.write(chunk)
-
-        # docker stop lambda
-        lambda_container.stop()
-
-        # docker rm lambda
-        lambda_container.remove()
-
-
-        
         lambda_function = _lambda.Function(
             self, f"{id}-lambda",
             runtime=_lambda.Runtime.PYTHON_3_7,
@@ -164,6 +128,26 @@ class titilerECSStack(core.Stack):
             description="Allows traffic on port 80 from NLB",
         )
 
+def create_lambda_package():
+    """Creates the lambda deployment package"""
+    
+    file_dir = os.path.dirname(os.path.abspath(__file__))
+    client = docker.from_env()
+
+    client.images.build(
+        path=os.path.join(file_dir, "..", "lambda"),
+        dockerfile="Dockerfile",
+        tag="lambda:latest"
+    )
+    
+    lambda_container = client.containers.run(
+        name="lambda",
+        image="lambda:latest",
+        command='/bin/sh -c "cp /tmp/package.zip /mnt/output/package.zip"',
+        volumes={
+            "lambda": {"bind": "/mnt/output", "mode": "rw"},
+        }
+    )
 
 app = core.App()
 
@@ -178,6 +162,7 @@ for key, value in {
         core.Tag.add(app, key, value)
 
 ecs_stackname = f"{config.PROJECT_NAME}-ecs-{config.STAGE}"
+
 titilerECSStack(
     app,
     ecs_stackname,
