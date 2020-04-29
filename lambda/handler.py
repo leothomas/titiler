@@ -5,6 +5,6 @@ from titiler.main import app
 
 handler = Mangum(
     app, 
-    api_gateway_base_path="prod/",
+    api_gateway_base_path="prod",
     enable_lifespan=False
 )
