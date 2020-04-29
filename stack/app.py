@@ -15,6 +15,8 @@ from aws_cdk import (
 
 import config
 
+import docker
+
 class titilerLambdaStack(core.Stack):
     """Titiler Lambda Stack"""
     
@@ -27,12 +29,51 @@ class titilerLambdaStack(core.Stack):
     ) -> None:
         """Define stack."""
         super().__init__(scope, id, *kwargs)
+
+        client = docker.from_env()
+        
+        # docker build --tag lambda:latest .
+        client.images.build(
+            path=os.path.join(code_dir, "lambda"),
+            dockerfile="Dockerfile",
+            tag="lambda:latest"
+        )
+        
+        # docker run --name lambda -itd lambda:latest /bin/bash
+        lambda_container = client.containers.run(
+            name="lambda", 
+            image="lambda:latest", 
+            command="/bin/bash",
+            detach=True, 
+            tty=True
+        )
+    
+        # docker cp lambda:/tmp/package.zip package.zip
+        
+        # docker-py has deprecated `copy()` and recomends using `get_archive()`
+        bits, stat = lambda_container.get_archive(
+            path="/tmp/package.zip"
+        ) 
+
+        package_filepath = os.path.join("lambda", "package.tar")
+
+        with open(package_filepath, "wb") as f:
+            for chunk in bits:
+                f.write(chunk)
+
+        # docker stop lambda
+        lambda_container.stop()
+
+        # docker rm lambda
+        lambda_container.remove()
+
+
         
         lambda_function = _lambda.Function(
             self, f"{id}-lambda",
             runtime=_lambda.Runtime.PYTHON_3_7,
             code=_lambda.Code.from_asset(
-                os.path.join(code_dir, 'lambda', 'package.zip'),
+                os.path.join(code_dir, "lambda", "package.zip"),
                 exclude=["cdk.out", ".git"]
             ),
             handler="handler.handler"
