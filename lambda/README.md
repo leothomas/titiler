@@ -110,4 +110,5 @@ $ cdk deploy <projectname-stage>
 ```
 
 **Note:** The CDK commands build the necessary docker image in the background. This may take several minutes depending on internet connection, etc.
+
 **Note:** Due to [compatibility issues](https://github.com/aws/aws-cdk/issues/5877) between some of the aws_cdk libraries and Node v13.X, it's recommended to use Node v12.X
