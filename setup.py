@@ -24,6 +24,7 @@ extra_reqs = {
         "aws-cdk.aws_ecs_patterns",
         "aws-cdk.aws_lambda",
         "aws-cdk.aws_apigateway",
+        "aws-cdk.aws_elasticloadbalancingv2",
     ],
     "test": ["mock", "pytest", "pytest-cov", "pytest-asyncio", "requests"],
 }
