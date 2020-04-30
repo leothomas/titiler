@@ -24,22 +24,19 @@ class titilerLambdaStack(core.Stack):
         self, 
         scope: core.Construct,
         id: str, 
-        code_dir: str = "./", 
+        code_dir: str = "lambda", 
         **kwargs: Any,
     ) -> None:
         """Define stack."""
         super().__init__(scope, id, *kwargs)        
         
         # create the lambda deployment package
-        create_lambda_package()
+        # create_lambda_package()
 
         lambda_function = _lambda.Function(
             self, f"{id}-lambda",
             runtime=_lambda.Runtime.PYTHON_3_7,
-            code=_lambda.Code.from_asset(
-                os.path.join(code_dir, "lambda", "package.zip"),
-                exclude=["cdk.out", ".git"]
-            ),
+            code=self.create_package(code_dir),
             handler="handler.handler"
         )
 
@@ -47,7 +44,25 @@ class titilerLambdaStack(core.Stack):
             self, f"{id}-endpoint",
             handler=lambda_function
         )
-
+    
+    def create_package(self, code_dir: str) -> _lambda.Code:
+        """test."""
+        client = docker.from_env()
+        client.images.build(
+            path=code_dir, dockerfile="Dockerfile", tag="lambda:latest"
+        )
+        client.containers.run(
+            image='lambda:latest',
+            command="/bin/sh -c 'cp /tmp/package.zip /local/package.zip'",
+            remove=True,
+            volumes={
+                os.path.abspath(code_dir): {'bind': '/local/', 'mode': 'rw'}
+            },
+            user=0
+        )
+        return _lambda.Code.asset(
+            os.path.join(code_dir, "package.zip")
+        )
 
 class titilerECSStack(core.Stack):
     """Titiler ECS Fargate Stack."""
@@ -127,6 +142,8 @@ class titilerECSStack(core.Stack):
             ),
             description="Allows traffic on port 80 from NLB",
         )
+
+
 
 def create_lambda_package():
     """Creates the lambda deployment package"""
