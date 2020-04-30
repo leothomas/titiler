@@ -123,7 +123,7 @@ class titilerStack(core.Stack):
             ),
         )
         container.add_port_mappings(ecs.PortMapping(container_port=80))
-        fargate_service = ecs.FargateService(
+        ecs.FargateService(
             self,
             f"{id}-fargate-service",
             cluster=fargate_cluster,
@@ -132,18 +132,18 @@ class titilerStack(core.Stack):
             security_group=security_group,
         )
 
-        scalable_target = fargate_service.service.auto_scale_task_count(
-            min_capacity=mincount, max_capacity=maxcount
-        )
+        # scalable_target = fargate_service.service.auto_scale_task_count(
+        #     min_capacity=mincount, max_capacity=maxcount
+        # )
 
-        # https://github.com/awslabs/aws-rails-provisioner/blob/263782a4250ca1820082bfb059b163a0f2130d02/lib/aws-rails-provisioner/scaling.rb#L343-L387
-        scalable_target.scale_on_request_count(
-            "RequestScaling",
-            requests_per_target=50,
-            scale_in_cooldown=core.Duration.seconds(240),
-            scale_out_cooldown=core.Duration.seconds(30),
-            target_group=fargate_service.target_group,
-        )
+        # # https://github.com/awslabs/aws-rails-provisioner/blob/263782a4250ca1820082bfb059b163a0f2130d02/lib/aws-rails-provisioner/scaling.rb#L343-L387
+        # scalable_target.scale_on_request_count(
+        #     "RequestScaling",
+        #     requests_per_target=50,
+        #     scale_in_cooldown=core.Duration.seconds(240),
+        #     scale_out_cooldown=core.Duration.seconds(30),
+        #     target_group=fargate_service.target_group,
+        # )
 
         alb = elbv2.ApplicationLoadBalancer(
             self,
@@ -165,7 +165,6 @@ class titilerStack(core.Stack):
 
         listener.add_targets(
             f"{id}-listener-lambda-targets",
-            port=80,
             protocol=elbv2.ApplicationProtocol.HTTP,
             targets=[targets.LambdaTarget(lambda_function)],
             deregistration_delay=core.Duration.seconds(3),
