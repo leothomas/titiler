@@ -18,7 +18,8 @@ def make_pkg():
         command='/bin/sh -c "cp /tmp/package.zip /mnt/output/package.zip"',
         volumes={
             "lambda": {"bind": "/mnt/output", "mode": "rw"},
-        }
+        },
+        auto_remove=True,
     )
 
 
