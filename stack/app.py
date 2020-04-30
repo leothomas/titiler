@@ -23,7 +23,7 @@ class titilerLambdaStack(core.Stack):
     """Titiler Lambda Stack"""
 
     def __init__(
-        self, scope: core.Construct, id: str, code_dir: str = "./", **kwargs: Any,
+        self, scope: core.Construct, id: str, code_dir: str = "./lambda", **kwargs: Any,
     ) -> None:
         """Define stack."""
         super().__init__(scope, id, *kwargs)
@@ -49,9 +49,7 @@ class titilerLambdaStack(core.Stack):
             volumes={os.path.abspath(code_dir): {"bind": "/local/", "mode": "rw"}},
             user=0,
         )
-        return _lambda.Code.asset(
-            os.path.join(code_dir, "package.zip"), exclude=["cdk.out", ".git"]
-        )
+        return _lambda.Code.asset(os.path.join(code_dir, "package.zip"))
 
 
 class titilerStack(core.Stack):
@@ -147,15 +145,6 @@ class titilerStack(core.Stack):
             f"{id}-listener-ecs-target",
             port=80,
             protocol=elbv2.ApplicationProtocol.HTTP,
-            # health_check = dict(
-            #     port= 'traffic-port',
-            #     path= '/',
-            #     intervalSecs= 30,
-            #     timeoutSeconds= 5,
-            #     healthyThresholdCount= 5,
-            #     unhealthyThresholdCount= 2,
-            #     healthyHttpCodes= "200,301,302"
-            # ),
             targets=[fargate_service],
             deregistration_delay=core.Duration.seconds(3),
         )
@@ -179,9 +168,7 @@ class titilerStack(core.Stack):
             volumes={os.path.abspath(code_dir): {"bind": "/local/", "mode": "rw"}},
             user=0,
         )
-        return _lambda.Code.asset(
-            os.path.join(code_dir, "package.zip"), exclude=["cdk.out", ".git"]
-        )
+        return _lambda.Code.asset(os.path.join(code_dir, "package.zip"))
 
 
 class titilerECSStack(core.Stack):
