@@ -12,6 +12,7 @@ from aws_cdk import (
     aws_lambda as _lambda,
     aws_apigateway as apigw,
     aws_elasticloadbalancingv2 as elbv2,
+    aws_elasticloadbalancingv2_targets as targets,
 )
 
 import config
@@ -131,6 +132,19 @@ class titilerStack(core.Stack):
             security_group=security_group,
         )
 
+        scalable_target = fargate_service.service.auto_scale_task_count(
+            min_capacity=mincount, max_capacity=maxcount
+        )
+
+        # https://github.com/awslabs/aws-rails-provisioner/blob/263782a4250ca1820082bfb059b163a0f2130d02/lib/aws-rails-provisioner/scaling.rb#L343-L387
+        scalable_target.scale_on_request_count(
+            "RequestScaling",
+            requests_per_target=50,
+            scale_in_cooldown=core.Duration.seconds(240),
+            scale_out_cooldown=core.Duration.seconds(30),
+            target_group=fargate_service.target_group,
+        )
+
         alb = elbv2.ApplicationLoadBalancer(
             self,
             f"{id}-loadbalancer",
@@ -141,19 +155,19 @@ class titilerStack(core.Stack):
 
         listener = alb.add_listener(f"{id}-listener", port=80)
 
-        listener.add_targets(
-            f"{id}-listener-ecs-target",
-            port=80,
-            protocol=elbv2.ApplicationProtocol.HTTP,
-            targets=[fargate_service],
-            deregistration_delay=core.Duration.seconds(3),
-        )
+        # listener.add_targets(
+        #     f"{id}-listener-ecs-target",
+        #     port=80,
+        #     protocol=elbv2.ApplicationProtocol.HTTP,
+        #     targets=[fargate_service],
+        #     deregistration_delay=core.Duration.seconds(3),
+        # )
 
         listener.add_targets(
             f"{id}-listener-lambda-targets",
             port=80,
             protocol=elbv2.ApplicationProtocol.HTTP,
-            targets=[lambda_function],
+            targets=[targets.LambdaTarget(lambda_function)],
             deregistration_delay=core.Duration.seconds(3),
         )
 
