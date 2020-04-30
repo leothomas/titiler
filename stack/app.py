@@ -27,9 +27,6 @@ class titilerLambdaStack(core.Stack):
         """Define stack."""
         super().__init__(scope, id, *kwargs)
 
-        # create the lambda deployment package
-        # create_lambda_package()
-
         lambda_function = _lambda.Function(
             self,
             f"{id}-lambda",
@@ -84,7 +81,7 @@ class titilerECSStack(core.Stack):
             desired_count=mincount,
             public_load_balancer=True,
             listener_port=80,
-            task_image_options=dict(
+            task_image_options=ecs_patterns.ApplicationLoadBalancedTaskImageOptions(
                 image=ecs.ContainerImage.from_asset(
                     code_dir, exclude=["cdk.out", ".git"]
                 ),

@@ -10,7 +10,7 @@ A lightweight Cloud Optimized GeoTIFF tile server.
 ### ø AWS ECS (Fargate) + ALB (Application Load Balancer)
 The stack is deployed by the [aws cdk](https://aws.amazon.com/cdk/) utility. It will handle tasks such as generating a docker image and packaging handlers automatically.
 
-1. Instal cdk and set up CDK in your AWS account - Only need once per account
+1. Install cdk and set up CDK in your AWS account - Only need once per account
 ```bash
 $ npm install cdk -g
 
