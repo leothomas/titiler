@@ -16,24 +16,28 @@ handler = Mangum(app, enable_lifespan=False)
 
 ```bash
 $ git clone https://github.com/developmentseed/titiler.git
-$ cd titiler/lambda
 ```
 
-2. Build Docker image and save package
+2. Deploy -- Using serverless
+
+
+2.1. Build Docker image and save package 
 
 ```bash
-docker build --tag lambda:latest .
-docker run --name lambda -itd lambda:latest /bin/bash
-docker cp lambda:/tmp/package.zip package.zip
-docker stop lambda
-docker rm lambda
+$ cd titiler/lambda
+
+$ docker build --tag lambda:latest .
+$ docker run --name lambda -itd lambda:latest /bin/bash
+$ docker cp lambda:/tmp/package.zip package.zip
+$ docker stop lambda
+$ docker rm lambda
 ```
 
-3. Deploy
+2.2. Install serverless and update `serverless.yml`
 
-3.1. Using Serverless
-
-`npm install -g serverless`
+```bash
+$ npm install -g serverless
+```
 
 ```yml
 # serverless.yml
@@ -70,8 +74,41 @@ functions:
           cors: true
 ```
 
-`sls deploy --bucket <my-bucket>`
+2.3. Deploy 
 
-3.2. Using CDK
-    
-**TODO**
+```bash
+$ sls deploy --bucket <my-bucket>
+```
+
+3. Deploy -- Using CDK
+
+3.1. Install cdk and set up CDK in your AWS account - Only need once per account
+
+```bash
+$ npm install cdk -g
+
+$ cdk bootstrap # Deploys the CDK toolkit stack into an AWS environment
+```
+
+3.2. Install dependencies
+
+```bash
+# Note: it's recommanded to use virtualenv
+$ cd titiler && pip install -e .[deploy]
+```
+
+3.3. Pre-Generate CFN template
+
+```bash
+$ cdk synth <projectname-stage>  # Synthesizes and prints the CloudFormation template for this stack
+```
+
+3.4. Deploy
+
+```bash
+$ cdk deploy <projectname-stage>
+```
+
+**Note:** The CDK commands build the necessary docker image in the background. This may take several minutes depending on internet connection, etc.
+
+**Note:** Due to [compatibility issues](https://github.com/aws/aws-cdk/issues/5877) between some of the aws_cdk libraries and Node v13.X, it's recommended to use Node v12.X

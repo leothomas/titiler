@@ -14,7 +14,7 @@ inst_reqs = [
     "email-validator",
 ]
 extra_reqs = {
-    "dev": ["pytest", "pytest-cov", "pytest-asyncio", "pre-commit"],
+    "dev": ["pytest", "pytest-cov", "pytest-asyncio", "pre-commit", "docker"],
     "server": ["uvicorn", "click==7.0"],
     "deploy": [
         "aws-cdk.core",
@@ -22,6 +22,9 @@ extra_reqs = {
         "aws-cdk.aws_ec2",
         "aws-cdk.aws_autoscaling",
         "aws-cdk.aws_ecs_patterns",
+        "aws-cdk.aws_lambda",
+        "aws-cdk.aws_apigatewayv2",
+        "aws-cdk.aws_iam"
     ],
     "test": ["mock", "pytest", "pytest-cov", "pytest-asyncio", "requests"],
 }

@@ -9,12 +9,65 @@ from aws_cdk import (
     aws_ec2 as ec2,
     aws_ecs as ecs,
     aws_ecs_patterns as ecs_patterns,
+    aws_lambda as _lambda,
+    aws_apigateway as apigw, 
+    aws_apigatewayv2 as apigwv2,
+    aws_iam as iam
 )
 
 import config
 
+import docker
 
-class titilerStack(core.Stack):
+
+class titilerLambdaStack(core.Stack):
+    """Titiler Lambda Stack"""
+
+    def __init__(
+        self, scope: core.Construct, id: str, code_dir: str = "lambda", **kwargs: Any,
+    ) -> None:
+        """Define stack."""
+        super().__init__(scope, id, *kwargs)
+
+        lambda_function = _lambda.Function(
+            self,
+            f"{id}-lambda",
+            runtime=_lambda.Runtime.PYTHON_3_7,
+            code=self.create_package(code_dir),
+            handler="handler.handler",
+        )
+
+        apigw.LambdaRestApi(self, f"{id}-endpoint", handler=lambda_function)
+
+        v2_endpoint = apigwv2.CfnApi(
+            self,
+            f"{id}_endpoint_v2",
+            name='titiler http v2 endpoint',
+            protocol_type='HTTP',
+            target = lambda_function.function_arn,
+        )
+        lambda_function.add_permission(
+            f"{id}_gateway_permission",
+            principal=iam.ServicePrincipal('apigateway.amazonaws.com'),
+            action='lambda:InvokeFunction'
+        )
+
+
+    def create_package(self, code_dir: str) -> _lambda.Code:
+        """test."""
+        client = docker.from_env()
+        client.images.build(path=code_dir, dockerfile="Dockerfile", tag="lambda:latest")
+        client.containers.run(
+            image="lambda:latest",
+            command="/bin/sh -c 'cp /tmp/package.zip /local/package.zip'",
+            remove=True,
+            volumes={os.path.abspath(code_dir): {"bind": "/local/", "mode": "rw"}},
+            user=0,
+        )
+        return _lambda.Code.asset(os.path.join(code_dir, "package.zip"))
+
+
+class titilerECSStack(core.Stack):
     """Titiler ECS Fargate Stack."""
 
     def __init__(
@@ -44,7 +97,7 @@ class titilerStack(core.Stack):
             desired_count=mincount,
             public_load_balancer=True,
             listener_port=80,
-            task_image_options=dict(
+            task_image_options=ecs_patterns.ApplicationLoadBalancedTaskImageOptions(
                 image=ecs.ContainerImage.from_asset(
                     code_dir, exclude=["cdk.out", ".git"]
                 ),
@@ -106,13 +159,20 @@ for key, value in {
     if value:
         core.Tag.add(app, key, value)
 
-stackname = f"{config.PROJECT_NAME}-{config.STAGE}"
-titilerStack(
+ecs_stackname = f"{config.PROJECT_NAME}-ecs-{config.STAGE}"
+
+titilerECSStack(
     app,
-    stackname,
+    ecs_stackname,
     cpu=config.TASK_CPU,
     memory=config.TASK_MEMORY,
     mincount=config.MIN_ECS_INSTANCES,
     maxcount=config.MAX_ECS_INSTANCES,
 )
+
+lambda_stackname = f"{config.PROJECT_NAME}-lambda-{config.STAGE}"
+titilerLambdaStack(
+    app, lambda_stackname,
+)
+
 app.synth()
