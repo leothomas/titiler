@@ -201,27 +201,27 @@ class titilerECSStack(core.Stack):
             desired_count=mincount,
             public_load_balancer=True,
             listener_port=80,
-            # task_image_options=dict(
-            #     image=ecs.ContainerImage.from_asset(
-            #         code_dir, exclude=["cdk.out", ".git"]
-            #     ),
-            #     container_port=80,
-            #     environment=dict(
-            #         CPL_TMPDIR="/tmp",
-            #         GDAL_CACHEMAX="75%",
-            #         GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR",
-            #         GDAL_HTTP_MERGE_CONSECUTIVE_RANGES="YES",
-            #         GDAL_HTTP_MULTIPLEX="YES",
-            #         GDAL_HTTP_VERSION="2",
-            #         MODULE_NAME="titiler.main",
-            #         PYTHONWARNINGS="ignore",
-            #         VARIABLE_NAME="app",
-            #         VSI_CACHE="TRUE",
-            #         VSI_CACHE_SIZE="1000000",
-            #         WORKERS_PER_CORE="1",
-            #         LOG_LEVEL="error",
-            #     ),
-            # ),
+            task_image_options=ecs_patterns.ApplicationLoadBalancedTaskImageOptions(
+                image=ecs.ContainerImage.from_asset(
+                    code_dir, exclude=["cdk.out", ".git"]
+                ),
+                container_port=80,
+                environment=dict(
+                    CPL_TMPDIR="/tmp",
+                    GDAL_CACHEMAX="75%",
+                    GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR",
+                    GDAL_HTTP_MERGE_CONSECUTIVE_RANGES="YES",
+                    GDAL_HTTP_MULTIPLEX="YES",
+                    GDAL_HTTP_VERSION="2",
+                    MODULE_NAME="titiler.main",
+                    PYTHONWARNINGS="ignore",
+                    VARIABLE_NAME="app",
+                    VSI_CACHE="TRUE",
+                    VSI_CACHE_SIZE="1000000",
+                    WORKERS_PER_CORE="1",
+                    LOG_LEVEL="error",
+                ),
+            ),
         )
 
         scalable_target = fargate_service.service.auto_scale_task_count(
