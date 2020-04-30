@@ -10,7 +10,9 @@ from aws_cdk import (
     aws_ecs as ecs,
     aws_ecs_patterns as ecs_patterns,
     aws_lambda as _lambda,
-    aws_apigateway as apigw,
+    aws_apigateway as apigw, 
+    aws_apigatewayv2 as apigwv2,
+    aws_iam as iam
 )
 
 import config
@@ -36,6 +38,20 @@ class titilerLambdaStack(core.Stack):
         )
 
         apigw.LambdaRestApi(self, f"{id}-endpoint", handler=lambda_function)
+
+        v2_endpoint = apigwv2.CfnApi(
+            self,
+            f"{id}_endpoint_v2",
+            name='titiler http v2 endpoint',
+            protocol_type='HTTP',
+            target = lambda_function.function_arn,
+        )
+        lambda_function.add_permission(
+            f"{id}_gateway_permission",
+            principal=iam.ServicePrincipal('apigateway.amazonaws.com'),
+            action='lambda:InvokeFunction'
+        )
+
 
     def create_package(self, code_dir: str) -> _lambda.Code:
         """test."""
